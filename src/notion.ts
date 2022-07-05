@@ -1,27 +1,73 @@
 import dotenv from 'dotenv';
-import { Client, LogLevel } from '@notionhq/client';
+import { Client as NotionClient, isNotionClientError, LogLevel } from '@notionhq/client';
+import { QueryDatabaseResponse } from '@notionhq/client/build/src/api-endpoints';
 
 dotenv.config();
 
-const {
-  NOTION_API_TOKEN,
-  NOTION_READER_DATABASE_ID,
-  NOTION_FEEDS_DATABASE_ID,
-  CI,
-} = process.env;
+interface NotionConfig {
+  token: string,
+  readerDatabaseId: string,
+  feedDatabaseId: string,
+  logLevel: LogLevel,
+}
 
-const logLevel = CI ? LogLevel.INFO : LogLevel.DEBUG;
+const notionConfig = createNotionConfig(process.env)
 
-export async function getFeedUrlsFromNotion() {
-  const notion = new Client({
-    auth: NOTION_API_TOKEN,
-    logLevel,
-  });
+function createNotionConfig(nodeConfig: NodeJS.ProcessEnv): NotionConfig {
+  if (nodeConfig.NOTION_API_TOKEN == undefined) {
+    throw new Error("Environment variable `NOTION_API_TOKEN` is required but not set.")
+  } else if (nodeConfig.NOTION_READER_DATABASE_ID == undefined) {
+    throw new Error("Environment variable `NOTION_READER_DATABASE_ID` is required but not set.")
+  } else if (nodeConfig.NOTION_FEEDS_DATABASE_ID == undefined) {
+    throw new Error("Environment variable `NOTION_FEEDS_DATABASE_ID` is required but not set.")
+  }
+  return {
+    token: nodeConfig.NOTION_API_TOKEN,
+    readerDatabaseId: nodeConfig.NOTION_READER_DATABASE_ID,
+    feedDatabaseId: nodeConfig.NOTION_FEEDS_DATABASE_ID,
+    logLevel: process.env.CI ? LogLevel.INFO : LogLevel.DEBUG
+  }
+}
 
-  let response;
-  try {
-    response = await notion.databases.query({
-      database_id: NOTION_FEEDS_DATABASE_ID,
+interface RssFeed {
+  title: string,
+  url: string,
+}
+
+interface FeedItem {
+  title: string,
+  link: string,
+
+  // See BlockObjectRequest from '@notionhq/client/build/src/api-endpoints';
+  content: any[],
+}
+
+
+class NotionWrapper {
+  private client: NotionClient;
+  private config: NotionConfig;
+
+  constructor(config: NotionConfig) {
+    this.config = config
+    this.client = new NotionClient({
+      auth: config.token,
+      logLevel: config.logLevel,
+    });
+  }
+
+  handleNotionError(e: Error) {
+    if (isNotionClientError(e)) {
+      // Update error catching https://github.com/makenotion/notion-sdk-js#typescript
+      console.log(e.code)
+    } else {
+      // Other error handling code
+      console.error(e)
+    }
+  }
+
+  async getEnabledRssFeeds(): Promise<RssFeed[]>  {
+    return this.client.databases.query({
+      database_id: this.config.feedDatabaseId,
       filter: {
         or: [
           {
@@ -32,70 +78,54 @@ export async function getFeedUrlsFromNotion() {
           },
         ],
       },
+    }).then((response) => {
+      return response.results.map((x) => ({
+        title: (x.properties["Title"] as any).title[0].plain_text,
+        url: (x.properties["Link"] as any).url,
+      }))
+    }).catch(onrejected => {
+      this.handleNotionError(onrejected as Error)
+      return [];
     });
-  } catch (err) {
-    console.error(err);
-    return [];
   }
 
-  const feeds = response.results.map((item) => ({
-    title: item.properties.Title.title[0].plain_text,
-    feedUrl: item.properties.Link.url,
-  }));
-
-  return feeds;
-}
-
-export async function addFeedItemToNotion(notionItem) {
-  const { title, link, content } = notionItem;
-
-  const notion = new Client({
-    auth: NOTION_API_TOKEN,
-    logLevel,
-  });
-
-  try {
-    await notion.pages.create({
-      parent: {
-        database_id: NOTION_READER_DATABASE_ID,
-      },
-      properties: {
-        Title: {
-          title: [
-            {
-              text: {
-                content: title,
+  async addFeedItem(item: FeedItem) {
+    const { title, link, content } = item;
+    this.client.pages.create({
+        parent: {
+          database_id: this.config.feedDatabaseId,
+        },
+        properties: {
+          Title: {
+            title: [
+              {
+                text: {
+                  content: title,
+                },
               },
-            },
-          ],
+            ],
+          },
+          Link: {
+            url: link,
+          },
         },
-        Link: {
-          url: link,
-        },
-      },
-      children: content,
-    });
-  } catch (err) {
-    console.error(err);
+        children: content,
+      }).catch ((err: any) => {
+      this.handleNotionError(err);
+    })
   }
-}
 
-export async function deleteOldUnreadFeedItemsFromNotion() {
-  const notion = new Client({
-    auth: NOTION_API_TOKEN,
-    logLevel,
-  });
+  archiveUnreadFeedItems() {
+    this.getOldUnreadFeedItemIds(30).then((pageIds: string[]) => {
+      this.archivePages(pageIds)
+    })
+  }
 
-  // Create a datetime which is 30 days earlier than the current time
-  const fetchBeforeDate = new Date();
-  fetchBeforeDate.setDate(fetchBeforeDate.getDate() - 30);
-
-  // Query the feed reader database
-  // and fetch only those items that are unread or created before last 30 days
-  let response;
-  try {
-    response = await notion.databases.query({
-      database_id: NOTION_READER_DATABASE_ID,
+  async getOldUnreadFeedItemIds(inLastNdays: number): Promise<string[]> {
+    const fetchBeforeDate = new Date();
+    fetchBeforeDate.setDate(fetchBeforeDate.getDate() - inLastNdays);
+    return this.client.databases.query({
+      database_id: this.config.feedDatabaseId,
       filter: {
         and: [
           {
@@ -112,24 +142,20 @@ export async function deleteOldUnreadFeedItemsFromNotion() {
           },
         ],
       },
-    });
-  } catch (err) {
-    console.error(err);
-    return;
+    }).then((response: QueryDatabaseResponse) => {
+      return response.results.map((item) => item.id)
+    })
+    .catch((err: any) => {
+      this.handleNotionError(err)
+      return [];
+    })
   }
 
-  // Get the page IDs from the response
-  const feedItemsIds = response.results.map((item) => item.id);
-
-  for (let i = 0; i < feedItemsIds.length; i++) {
-    const id = feedItemsIds[i];
-    try {
-      await notion.pages.update({
-        page_id: id,
-        archived: true,
-      });
-    } catch (err) {
-      console.error(err);
-    }
+  archivePages(pageIds: string[]) {
+    pageIds.forEach((id) => {
+      this.client.pages.update({page_id: id, archived: true});
+    })
   }
 }
+
+export default new NotionWrapper(notionConfig);
