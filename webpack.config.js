@@ -14,10 +14,10 @@ module.exports = (env) => {
     target: 'node',
     mode: isProductionMode ? 'production' : 'development',
     context: __dirname,
-    entry: getSrcPath('/index.js'),
+    entry: getSrcPath('/index.ts'),
     stats: { errorDetails: !isProductionMode },
     output: {
-      filename: 'index.js',
+      filename: 'bundle.js',
       path: path.resolve(__dirname, 'dist'),
       clean: true,
     },
@@ -25,7 +25,7 @@ module.exports = (env) => {
       alias: {
         src: path.resolve(__dirname, 'src'),
       },
-      extensions: ['.js'],
+      extensions: ['.ts'],
     },
     optimization: {
       minimize: false,
