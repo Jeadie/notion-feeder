@@ -1,22 +1,13 @@
-[![Release](https://github.com/ravgeetdhillon/notion-feeder/actions/workflows/release.yml/badge.svg)](https://github.com/ravgeetdhillon/notion-feeder/actions/workflows/release.yml)
-[![Get Feed](https://github.com/ravgeetdhillon/notion-feeder/actions/workflows/main.yml/badge.svg)](https://github.com/ravgeetdhillon/notion-feeder/actions/workflows/main.yml)
+[![Release](https://github.com/jeadie/notion-feeder/actions/workflows/release.yml/badge.svg)](https://github.com/jeadie/notion-feeder/actions/workflows/release.yml)
+[![Get Feed](https://github.com/jeadie/notion-feeder/actions/workflows/main.yml/badge.svg)](https://github.com/jeadie/notion-feeder/actions/workflows/main.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-<a href="https://www.producthunt.com/posts/notion-feeder?utm_source=badge-featured&utm_medium=badge&utm_souce=badge-notion-feeder" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=316289&theme=light" alt="Notion Feeder - Convert Notion to a Feed Reader | Product Hunt" style="width: 166px; height: 36px;" width="166" height="36" /></a>
 
 # Notion Feeder
 
-A Node.js app for creating a Feed Reader in [Notion](https://notion.so).
+Typescript app for creating a Feed Reader in [Notion](https://notion.so).
 
 ![](/screenshots/working.gif)
 
-***
-
-If you loved this product and value my time, consider [sending some love](https://paypal.me/ravgeetdhillon) to me. This will enable me to work on more projects like these in the future.
-
-[![PayPal Donate Button](https://images.squarespace-cdn.com/content/v1/55f62c4ce4b02545cc6ee94f/1558204823259-CQ0YNKZEHP7W5LO64PBU/paypal-donate-button-1.PNG?format=300w)](https://paypal.me/ravgeetdhillon)
-
-***
 
 ## Features
 
@@ -79,33 +70,10 @@ These things are required before setting up the project.
 - Node.js [Read Guide](https://www.digitalocean.com/community/tutorials/how-to-install-node-js-on-ubuntu-20-04)
 
 ### Setup
-
-Follow these instructions to get the project up and running.
-
-```bash
-# clone the repo
-$ git clone https://github.com/ravgeetdhillon/notion-feeder.git
-
-# change directory
-$ cd notion-feeder
-
-# install dependencies
-$ npm install
-
-# enable webpack bundling
-$ npm run watch
-```
-
-## Tech Stack
-
-* [Node](https://nodejs.org/)
-* [Notion API](https://developers.notion.com)
+- TODO
 
 ## Contributors
 
-- [Ravgeet Dhillon](https://github.com/ravgeetdhillon)
+- [Jack Eadie](https://github.com/jeadie)
+- [Ravgeet Dhillon](https://github.com/ravgeetdhillon) (Inspired by [ravgeetdhillon/notion-feeder](https://github.com/ravgeetdhillon/notion-feeder))
 
-## Extra
-
-- You can request features and file bugs [here](https://github.com/ravgeetdhillon/notion-feeder/issues).
-- In case you get stuck somewhere, feel free to contact me at my [email](mailto:ravgeetdhillon@gmail.com).
